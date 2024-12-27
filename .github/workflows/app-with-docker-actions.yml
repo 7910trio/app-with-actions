@@ -1,0 +1,30 @@
+name: Deploy Docker Image to EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Pull Docker image
+      run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app-with-actions:latest
+
+    - name: Deploy Docker image to EC2
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        script: |
+          docker stop app || true
+          docker rm app || true
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app-with-actions:latest
+          docker run -d -p 8080:8080 --name app ${{ secrets.DOCKERHUB_USERNAME }}/app-with-actions:latest
